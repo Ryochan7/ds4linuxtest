@@ -15,7 +15,7 @@ struct vidInfo
 static const int KNOWN_DEV_LEN = 2;
 static struct vidInfo devInfo[KNOWN_DEV_LEN] = {
     {0x54c, 0xba0}, // Sony Wireless Adapter
-    {0x54c, 0x54c}  // DS4 v.1
+    {0x54c, 0x5c4}  // DS4 v.1
 };
 
 DeviceCollection::DeviceCollection(struct udev* udevinst, QObject *parent) : QObject(parent)

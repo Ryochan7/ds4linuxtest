@@ -18,6 +18,8 @@ class Tester : public QObject
 {
     Q_OBJECT
 public:
+    enum ConnectionType {USB, BT, SONYWA};
+
     explicit Tester(QObject *parent = nullptr);
     ~Tester();
     Tester(const char* devpath, QObject *parent = nullptr);
@@ -26,10 +28,16 @@ public:
     void startInput();
     bool isStarted();
 
+    ConnectionType conType = ConnectionType::USB;
+
 protected:
     void initDev();
+    void initUSB();
+    void initBT();
 
     const int MAX_READ_EVENTS = 2;
+    static const int DS4_REPORT_0x05_LEN = 32;
+    static const int DS4_REPORT_0x15_LEN = 334;
 
     QFile *testDev;
     int hidHandle;
@@ -41,6 +49,7 @@ protected:
     struct epoll_event events[2];
     uchar bufshit[64];
     uchar bufout[32];
+    //uchar bufout[334]; // BT
     bool stillread;
     DS4State currentState;
     DS4State previousState;

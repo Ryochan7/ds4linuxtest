@@ -27,6 +27,7 @@ protected:
     QList<Tester*> controllers;
     QHash<QString, Tester*> existingDevPaths;
     struct udev *udevinst;
+    static QString HID_ID_PATTERN;
 
 signals:
 

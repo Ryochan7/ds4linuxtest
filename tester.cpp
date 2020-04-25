@@ -63,6 +63,18 @@ void Tester::openDevice()
 
 void Tester::initDev()
 {
+    if (conType == BT)
+    {
+        initBT();
+    }
+    else
+    {
+        initUSB();
+    }
+}
+
+void Tester::initUSB()
+{
     bufout[0] = 0x05;
     // enable rumble (0x01), lightbar (0x02), flash (0x04)
     bufout[1] = 0xf7;
@@ -76,6 +88,32 @@ void Tester::initDev()
 
     //write(hidHandle, bufout, 32);
     write(hidWriteHandle, bufout, 32);
+    //QTime start;
+    //start.start();
+    //testDev->write((char*)bufout, 32);
+    //qDebug() << "gdgdfdf " << start.elapsed();
+}
+
+void Tester::initBT()
+{
+    return;
+
+    bufout[0] = 0x11;
+    bufout[1] = 0xC0 | 0x04;
+    bufout[2] = 0xa2;
+    // enable rumble (0x01), lightbar (0x02), flash (0x04)
+    bufout[3] = 0xF7;
+    bufout[6] = 0xFF; // fast motor
+    bufout[7] = 0xFF; // slow motor
+    bufout[8] = 0xFF; // red
+    bufout[9] = 0xFF; // green
+    bufout[10] = 0xFF; // blue
+    bufout[11] = 0xFF; // flash on duration
+    bufout[12] = 0xFF; // flash off duration
+
+    //write(hidHandle, bufout, 32);
+    int res = write(hidHandle, bufout, 334);
+    Q_UNUSED(res);
     //QTime start;
     //start.start();
     //testDev->write((char*)bufout, 32);
@@ -110,6 +148,7 @@ void Tester::startShit()
     int numEvents = 0;
     int currentEvent;
     long numbytes = 0;
+    int offset = conType == BT ? 2 : 0;
     QAbstractEventDispatcher *shitfuck = QAbstractEventDispatcher::instance();
 
     qDebug() << "IN EVENT LOOP";
@@ -134,14 +173,15 @@ void Tester::startShit()
         //qDebug() << "Shit after that";
         //qDebug() << bufshit[1];
 
-        currentState.LX = bufshit[1];
-        currentState.LY = bufshit[2];
-        currentState.RX = bufshit[3];
-        currentState.RY = bufshit[4];
-        currentState.L2 = bufshit[8];
-        currentState.R2 = bufshit[9];
+        int ind = offset + 1;
+        currentState.LX = bufshit[ind]; ind++;
+        currentState.LY = bufshit[ind]; ind++;
+        currentState.RX = bufshit[ind]; ind++;
+        currentState.RY = bufshit[ind]; ind += 4;
+        currentState.L2 = bufshit[ind]; ind++;
+        currentState.R2 = bufshit[ind]; ind++;
 
-        uchar tempByte = bufshit[5];
+        uchar tempByte = bufshit[5+offset];
         currentState.Triangle = (tempByte & (1 << 7)) != 0;
         currentState.Circle = (tempByte & (1 << 6)) != 0;
         currentState.Cross = (tempByte & (1 << 5)) != 0;
@@ -164,7 +204,7 @@ void Tester::startShit()
             break;
         }
 
-        tempByte = bufshit[6];
+        tempByte = bufshit[6+offset];
         currentState.R3 = (tempByte & (1 << 7)) != 0;
         currentState.L3 = (tempByte & (1 << 6)) != 0;
         currentState.Options = (tempByte & (1 << 5)) != 0;
@@ -174,11 +214,11 @@ void Tester::startShit()
         currentState.R1 = (tempByte & (1 << 1)) != 0;
         currentState.L1 = (tempByte & (1 << 0)) != 0;
 
-        tempByte = bufshit[7];
+        tempByte = bufshit[7+offset];
         currentState.PS = (tempByte & (1 << 0)) != 0;
         currentState.TouchButton = (tempByte & 0x02) != 0;
 
-        tempByte = bufshit[30];
+        tempByte = bufshit[30+offset];
         charging = (tempByte & 0x10) != 0;
         currentState.Battery = static_cast<ushort>(qMin((tempByte & 0x0f) * 100 / maxBatteryLife, 100));
 
@@ -211,6 +251,8 @@ void Tester::startShit()
                                     QEventLoop::ProcessEventsFlag::EventLoopExec |
                                     QEventLoop::ProcessEventsFlag::X11ExcludeTimers);
         }
+
+        //initBT();
     }
 
     //waitInputEnd.lock();
@@ -226,8 +268,18 @@ void Tester::stopDevice()
     stillread = false;
     //eventfd_write(evfd, 1);
     //close(epfd);
-    close(hidHandle);
-    close(hidWriteHandle);
+    if (hidHandle)
+    {
+        close(hidHandle);
+        hidHandle = 0;
+    }
+
+    if (hidWriteHandle)
+    {
+        close(hidWriteHandle);
+        hidWriteHandle = 0;
+    }
+
     //inputEnded.wait(&waitInputEnd);
     //testDev->close();
     outdev->closeDevice();
@@ -278,6 +330,4 @@ Tester::~Tester()
         delete btOutputThread;
         btOutputThread = nullptr;
     }
-
-
 }

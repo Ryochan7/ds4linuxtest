@@ -6,16 +6,19 @@
 
 #include "devicecollection.h"
 
+QString DeviceCollection::HID_ID_PATTERN = QString("^([0-9A-E]{4}):([0-9A-E]{8}):([0-9A-E]{8})$");
+
 struct vidInfo
 {
     int vid;
     int pid;
 };
 
-static const int KNOWN_DEV_LEN = 2;
+static const int KNOWN_DEV_LEN = 3;
 static struct vidInfo devInfo[KNOWN_DEV_LEN] = {
-    {0x54c, 0xba0}, // Sony Wireless Adapter
-    {0x54c, 0x5c4}  // DS4 v.1
+    {0x54C, 0xBA0},   // Sony Wireless Adapter
+    {0x54C, 0x5C4},   // DS4 v.1
+    {0x54C, 0x09CC}   // DS4 v.2
 };
 
 DeviceCollection::DeviceCollection(struct udev* udevinst, QObject *parent) : QObject(parent)
@@ -33,13 +36,13 @@ void DeviceCollection::findControllers()
     struct udev_list_entry *entry;
     udev_list_entry_foreach(entry, devices)
     {
-        const char* path = udev_list_entry_get_name(entry);
-        struct udev_device* hidraw_dev = udev_device_new_from_syspath(udev, path);
+        const char* syspath = udev_list_entry_get_name(entry);
+        struct udev_device* hidraw_dev = udev_device_new_from_syspath(udev, syspath);
         //struct udev_device *shitter = udev_device_get_parent(hidraw_dev);
 
-        struct udev_device* usbhid
-                    = udev_device_get_parent_with_subsystem_devtype(hidraw_dev, "usb", "usb_device");
-        const char* path2 = udev_device_get_devpath(usbhid);
+        struct udev_device* usbhid_dev
+                    = udev_device_get_parent_with_subsystem_devtype(hidraw_dev, "hid", NULL);
+        const char* path2 = udev_device_get_devpath(usbhid_dev);
         Q_UNUSED(path2);
         const char* path3 = udev_device_get_devnode(hidraw_dev);
 
@@ -49,48 +52,70 @@ void DeviceCollection::findControllers()
             continue;
         }
 
-        const char* vendor_id_str = udev_device_get_sysattr_value(usbhid, "idVendor");
-        const char* product_id_str = udev_device_get_sysattr_value(usbhid, "idProduct");
-        const char* serial = udev_device_get_sysattr_value(usbhid, "serial");
+        QRegExp jizzle_physics(HID_ID_PATTERN);
+        const char* hid_id = udev_device_get_property_value(usbhid_dev, "HID_ID");
+        int vendor_id = 0; int product_id = 0;
+        int bus_id = 0;
+        bool ok = false;
+        if (jizzle_physics.exactMatch(hid_id))
+        {
+            bus_id = jizzle_physics.cap(1).toInt(&ok, 16);
+            vendor_id = jizzle_physics.cap(2).toInt(&ok, 16);
+            product_id = jizzle_physics.cap(3).toInt(&ok, 16);
+        }
+
+        //const char* vendor_id_str = udev_device_get_sysattr_value(usbhid_dev, "idVendor");
+        //const char* product_id_str = udev_device_get_sysattr_value(usbhid_dev, "idProduct");
+        const char* serial = udev_device_get_property_value(usbhid_dev, "KERNELS");
         qDebug() << serial;
+        qDebug() << "HIGH CUCKERY";
+        qDebug() << path3;
 
         printf("block = %s, %s, usb = %s:%s, scsi = %s, shit = %s, ggg = %s\n",
-                           path,
+                           syspath,
                udev_device_get_devnode(hidraw_dev),
-                           udev_device_get_sysattr_value(usbhid, "idVendor"),
-                           udev_device_get_sysattr_value(usbhid, "idProduct"),
-                           udev_device_get_sysattr_value(hidraw_dev, "vendor"),
-                udev_device_get_property_value(hidraw_dev, "DEVNAME"),
+                           udev_device_get_sysattr_value(usbhid_dev, "idVendor"),
+                           udev_device_get_sysattr_value(usbhid_dev, "idProduct"),
+                           udev_device_get_sysattr_value(usbhid_dev, "uevent"),
+                udev_device_get_property_value(usbhid_dev, "HID_UNIQ"),
                path2)
                 ;
 
-        bool ok = false;
-        int vendor_id = QString(vendor_id_str).toInt(&ok, 16);
-        int product_id = QString(product_id_str).toInt(&ok, 16);
+        //int vendor_id = QString(vendor_id_str).toInt(&ok, 16);
+        //int product_id = QString(product_id_str).toInt(&ok, 16);
 
         bool foundDev = false;
-        for (int ind = 0; ind < KNOWN_DEV_LEN && !foundDev; ind++)
+        if (vendor_id != 0 && product_id != 0)
         {
-            vidInfo current = devInfo[ind];
-            if (vendor_id == current.vid && product_id == current.pid)
+            for (int ind = 0; ind < KNOWN_DEV_LEN && !foundDev; ind++)
             {
-                //struct udev_device *usbtemp = udev_device_get_parent(usbhid);
-                struct udev_device *chid = getDevChild(usbhid, "input");
-                qDebug() << "DDD " << udev_device_get_property_value(chid, "idVendor");
+                vidInfo current = devInfo[ind];
+                if (vendor_id == current.vid && product_id == current.pid)
+                {
+                    //struct udev_device *usbtemp = udev_device_get_parent(usbhid);
+                    struct udev_device *chid = getDevChild(usbhid_dev, "input");
+                    qDebug() << "DDD " << udev_device_get_property_value(chid, "idVendor");
 
-                Tester *tempDev = new Tester(path3);
-                controllers.append(tempDev);
-                existingDevPaths.insert(tempPath, tempDev);
-                qDebug() << "FOUND DEVICE";
+                    Tester *tempDev = new Tester(path3);
+                    if (bus_id == 5)
+                    {
+                        tempDev->conType = Tester::ConnectionType::BT;
+                    }
+
+                    controllers.append(tempDev);
+                    existingDevPaths.insert(tempPath, tempDev);
+                    qDebug() << "FOUND DEVICE";
+                    udev_device_unref(hidraw_dev);
+                    foundDev = true;
+                }
+            }
+
+            if (!foundDev)
+            {
                 udev_device_unref(hidraw_dev);
-                foundDev = true;
             }
         }
 
-        if (!foundDev)
-        {
-            udev_device_unref(hidraw_dev);
-        }
     }
 
     udev_enumerate_unref(enumerate);

@@ -67,11 +67,15 @@ void Tester::initDev()
 {
     if (conType == BT)
     {
+        //bufout = new uchar[DS4_REPORT_0x15_LEN];
+        //for (int i = 0; i < DS4_REPORT_0x15_LEN; i++) bufout[i] = 0;
         setOperational();
         initBT();
     }
     else
     {
+        //bufout = new uchar[DS4_REPORT_0x05_LEN];
+        //for (int i = 0; i < DS4_REPORT_0x05_LEN; i++) bufout[i] = 0;
         initUSB();
     }
 }
@@ -111,8 +115,8 @@ void Tester::setOperational()
 
 void Tester::initBT()
 {
-    bufout[0] = 0x11;
-    bufout[1] = 0xC0;
+    bufout[0] = 0x15;
+    bufout[1] = 0xC4;
     //bufout[2] = 0xa0;
     // enable rumble (0x01), lightbar (0x02), flash (0x04)
     bufout[3] = 0xF7;
@@ -125,7 +129,7 @@ void Tester::initBT()
     bufout[12] = 0x00; // flash off duration
 
     //write(hidHandle, bufout, 32);
-    int res = write(hidWriteHandle, bufout, DS4_REPORT_0x11_LEN);
+    int res = write(hidWriteHandle, bufout, DS4_REPORT_0x15_LEN);
     Q_UNUSED(res);
     //QTime start;
     //start.start();
@@ -349,4 +353,10 @@ Tester::~Tester()
         delete btOutputThread;
         btOutputThread = nullptr;
     }
+
+//    if (bufout)
+//    {
+//        delete [] bufout;
+//        bufout = NULL;
+//    }
 }

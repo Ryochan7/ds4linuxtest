@@ -53,6 +53,7 @@ protected:
     uchar bufshit[64];
     //uchar bufout[DS4_REPORT_0x05_LEN];
     uchar bufout[DS4_REPORT_0x11_LEN]; // BT
+    //uchar *bufout = NULL;
     bool stillread;
     DS4State currentState;
     DS4State previousState;

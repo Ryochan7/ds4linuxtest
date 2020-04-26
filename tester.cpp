@@ -77,6 +77,8 @@ void Tester::initDev()
     {
         //bufout = new uchar[DS4_OUTPUT_REPORT_0x05_LEN];
         //for (int i = 0; i < DS4_OUTPUT_REPORT_0x05_LEN; i++) bufout[i] = 0;
+        memset(&bufout, 0, DS4_OUTPUT_REPORT_0x05_LEN);
+        setOperational();
         initUSB();
     }
 }
@@ -104,11 +106,12 @@ void Tester::initUSB()
 
 void Tester::setOperational()
 {
-    uchar report[DS4_FEATURE_REPORT_0x05_SIZE];
-    memset(&report, 0, DS4_FEATURE_REPORT_0x05_SIZE);
-    report[0] = 0x05;
+    int report_len = conType == BT ? DS4_FEATURE_REPORT_0x05_SIZE : DS4_FEATURE_REPORT_0x02_SIZE;
+    uchar report[report_len];
+    memset(&report, 0, report_len);
+    report[0] = conType == BT ? 0x05 : 0x02;
 
-    int res = ioctl(hidWriteHandle, HIDIOCGFEATURE(DS4_FEATURE_REPORT_0x05_SIZE), &report);
+    int res = ioctl(hidWriteHandle, HIDIOCGFEATURE(report_len), &report);
     if (res >= 0)
     {
         qDebug() << "SUCCESS";
@@ -160,6 +163,7 @@ static bool runevloop = false;
 void Tester::startShit()
 {
     stillread = true;
+    memset(&bufshit, 0, DS4_INPUT_REPORT_0x11_LEN);
     int tempBattery = 0;
     Q_UNUSED(tempBattery);
     bool charging = false;

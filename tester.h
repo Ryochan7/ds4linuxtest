@@ -42,6 +42,7 @@ protected:
     //static const int DS4_OUTPUT_REPORT_0x11_LEN = 334;
     static const int DS4_INPUT_REPORT_0x11_LEN = 64;
     static const int DS4_OUTPUT_REPORT_0x15_LEN = 334;
+    static const int DS4_FEATURE_REPORT_0x02_SIZE = 37;
     static const int DS4_FEATURE_REPORT_0x05_SIZE = 41;
 
     QFile *testDev;

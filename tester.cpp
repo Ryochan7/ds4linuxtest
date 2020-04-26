@@ -67,15 +67,16 @@ void Tester::initDev()
 {
     if (conType == BT)
     {
-        //bufout = new uchar[DS4_REPORT_0x15_LEN];
-        //for (int i = 0; i < DS4_REPORT_0x15_LEN; i++) bufout[i] = 0;
+        //bufout = new uchar[DS4_OUTPUT_REPORT_0x15_LEN];
+        //for (int i = 0; i < DS4_OUTPUT_REPORT_0x15_LEN; i++) bufout[i] = 0;
+        memset(&bufout, 0, DS4_OUTPUT_REPORT_0x15_LEN);
         setOperational();
         initBT();
     }
     else
     {
-        //bufout = new uchar[DS4_REPORT_0x05_LEN];
-        //for (int i = 0; i < DS4_REPORT_0x05_LEN; i++) bufout[i] = 0;
+        //bufout = new uchar[DS4_OUTPUT_REPORT_0x05_LEN];
+        //for (int i = 0; i < DS4_OUTPUT_REPORT_0x05_LEN; i++) bufout[i] = 0;
         initUSB();
     }
 }
@@ -94,7 +95,7 @@ void Tester::initUSB()
     bufout[10] = 0x00; // flash off duration
 
     //write(hidHandle, bufout, 32);
-    write(hidWriteHandle, bufout, DS4_REPORT_0x05_LEN);
+    write(hidWriteHandle, bufout, DS4_OUTPUT_REPORT_0x05_LEN);
     //QTime start;
     //start.start();
     //testDev->write((char*)bufout, 32);
@@ -103,7 +104,8 @@ void Tester::initUSB()
 
 void Tester::setOperational()
 {
-    unsigned char report[DS4_FEATURE_REPORT_0x05_SIZE];
+    uchar report[DS4_FEATURE_REPORT_0x05_SIZE];
+    memset(&report, 0, DS4_FEATURE_REPORT_0x05_SIZE);
     report[0] = 0x05;
 
     int res = ioctl(hidWriteHandle, HIDIOCGFEATURE(DS4_FEATURE_REPORT_0x05_SIZE), &report);
@@ -129,7 +131,8 @@ void Tester::initBT()
     bufout[12] = 0x00; // flash off duration
 
     //write(hidHandle, bufout, 32);
-    int res = write(hidWriteHandle, bufout, DS4_REPORT_0x15_LEN);
+    int res = write(hidWriteHandle, bufout, DS4_OUTPUT_REPORT_0x15_LEN);
+    //qDebug() << res;
     Q_UNUSED(res);
     //QTime start;
     //start.start();
@@ -167,6 +170,7 @@ void Tester::startShit()
     long numbytes = 0;
     int offset = conType == BT ? 2 : 0;
     QAbstractEventDispatcher *shitfuck = QAbstractEventDispatcher::instance();
+    thread()->msleep(100);
 
     qDebug() << "IN EVENT LOOP";
 
@@ -186,7 +190,7 @@ void Tester::startShit()
         //    break;
         //}
 
-        numbytes = read(hidHandle, bufshit, 64);
+        numbytes = read(hidHandle, bufshit, DS4_INPUT_REPORT_0x11_LEN);
         if (numbytes < 0)
         {
             stillread = false;
@@ -310,7 +314,12 @@ void Tester::stopDevice()
     otherInputThread.quit();
     otherInputThread.wait();
 
-    outdev->closeDevice();
+    if (outdev)
+    {
+        outdev->closeDevice();
+        //outdev = nullptr;
+    }
+
 
     //dudebro->join();
     //testInputThread.quit();

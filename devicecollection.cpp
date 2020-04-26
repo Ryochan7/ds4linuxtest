@@ -112,20 +112,17 @@ void DeviceCollection::findControllers()
                     controllers.append(tempDev);
                     existingDevPaths.insert(tempPath, tempDev);
                     qDebug() << "FOUND DEVICE";
-                    udev_device_unref(hidraw_dev);
                     foundDev = true;
                 }
             }
-
-            if (!foundDev)
-            {
-                udev_device_unref(hidraw_dev);
-            }
         }
 
+        udev_device_unref(hidraw_dev);
     }
 
     udev_enumerate_unref(enumerate);
+
+    qDebug() << "END FIND CONTROLLERS";
 }
 
 void DeviceCollection::startControllers()
@@ -133,15 +130,19 @@ void DeviceCollection::startControllers()
     QListIterator<Tester*> iter(controllers);
     while (iter.hasNext())
     {
+        qDebug() << "ITER";
         Tester *current = iter.next();
         if (!current->isStarted())
         {
             current->openDevice();
             //QtConcurrent::run(current, &Tester::startShit);
+            //thread()->msleep(1000);
             current->startInput();
             //current->startShit();
         }
     }
+
+    qDebug() << "END START CONTROLLERS";
 }
 
 void DeviceCollection::removeController(Tester *device)

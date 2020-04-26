@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/eventfd.h>
+#include <linux/hidraw.h>
 
 #include <QDebug>
 #include <QTime>
@@ -36,7 +37,8 @@ void Tester::openDevice()
     const char* temppath = ba.data();
     qDebug() << "OPATHIT " << temppath;
     hidHandle = open(temppath, O_RDONLY);
-    hidWriteHandle = open(temppath, O_WRONLY | O_NONBLOCK);
+    hidWriteHandle = open(temppath, O_RDWR | O_NONBLOCK);
+    //hidWriteHandle = open(temppath, O_WRONLY | O_NONBLOCK);
 
     //hidHandle = open("/dev/hidraw4", O_RDONLY);
     //hidWriteHandle = open("/dev/hidraw4", O_WRONLY | O_NONBLOCK);
@@ -65,6 +67,7 @@ void Tester::initDev()
 {
     if (conType == BT)
     {
+        setOperational();
         initBT();
     }
     else
@@ -87,20 +90,30 @@ void Tester::initUSB()
     bufout[10] = 0x00; // flash off duration
 
     //write(hidHandle, bufout, 32);
-    write(hidWriteHandle, bufout, 32);
+    write(hidWriteHandle, bufout, DS4_REPORT_0x05_LEN);
     //QTime start;
     //start.start();
     //testDev->write((char*)bufout, 32);
     //qDebug() << "gdgdfdf " << start.elapsed();
 }
 
+void Tester::setOperational()
+{
+    unsigned char report[DS4_FEATURE_REPORT_0x05_SIZE];
+    report[0] = 0x05;
+
+    int res = ioctl(hidWriteHandle, HIDIOCGFEATURE(DS4_FEATURE_REPORT_0x05_SIZE), &report);
+    if (res >= 0)
+    {
+        qDebug() << "SUCCESS";
+    }
+}
+
 void Tester::initBT()
 {
-    return;
-
     bufout[0] = 0x11;
-    bufout[1] = 0xC0 | 0x04;
-    bufout[2] = 0xa2;
+    bufout[1] = 0xC0;
+    //bufout[2] = 0xa0;
     // enable rumble (0x01), lightbar (0x02), flash (0x04)
     bufout[3] = 0xF7;
     bufout[6] = 0xFF; // fast motor
@@ -108,11 +121,11 @@ void Tester::initBT()
     bufout[8] = 0xFF; // red
     bufout[9] = 0xFF; // green
     bufout[10] = 0xFF; // blue
-    bufout[11] = 0xFF; // flash on duration
-    bufout[12] = 0xFF; // flash off duration
+    bufout[11] = 0x00; // flash on duration
+    bufout[12] = 0x00; // flash off duration
 
     //write(hidHandle, bufout, 32);
-    int res = write(hidHandle, bufout, 334);
+    int res = write(hidWriteHandle, bufout, DS4_REPORT_0x11_LEN);
     Q_UNUSED(res);
     //QTime start;
     //start.start();
@@ -152,6 +165,12 @@ void Tester::startShit()
     QAbstractEventDispatcher *shitfuck = QAbstractEventDispatcher::instance();
 
     qDebug() << "IN EVENT LOOP";
+
+    /*while (true)
+    {
+        initBT();
+    }
+    */
 
     //while (stillread && testDev->read((char*)bufshit, 64))
     while (stillread)
@@ -251,8 +270,6 @@ void Tester::startShit()
                                     QEventLoop::ProcessEventsFlag::EventLoopExec |
                                     QEventLoop::ProcessEventsFlag::X11ExcludeTimers);
         }
-
-        //initBT();
     }
 
     //waitInputEnd.lock();
@@ -282,12 +299,14 @@ void Tester::stopDevice()
 
     //inputEnded.wait(&waitInputEnd);
     //testDev->close();
-    outdev->closeDevice();
+
     //fucker->quit();
     //fucker->wait();
 
     otherInputThread.quit();
     otherInputThread.wait();
+
+    outdev->closeDevice();
 
     //dudebro->join();
     //testInputThread.quit();

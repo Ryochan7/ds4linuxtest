@@ -225,5 +225,6 @@ void XboxOutDevice::closeDevice()
         result = ioctl(uinputHandler, UI_DEV_DESTROY);
         result = close(uinputHandler);
         Q_UNUSED(result);
+        uinputHandler = 0;
     }
 }

@@ -42,9 +42,12 @@ void DeviceCollection::findControllers()
 
         struct udev_device* usbhid_dev
                     = udev_device_get_parent_with_subsystem_devtype(hidraw_dev, "hid", NULL);
+        struct udev_device* usbhid_dev2
+                    = udev_device_get_parent_with_subsystem_devtype(hidraw_dev, "usb", "usb_device");
         const char* path2 = udev_device_get_devpath(usbhid_dev);
         Q_UNUSED(path2);
         const char* path3 = udev_device_get_devnode(hidraw_dev);
+        const char* path4 = udev_device_get_devnode(usbhid_dev2);
 
         QString tempPath =  QString::fromLocal8Bit(path3);
         if (existingDevPaths.contains(tempPath))
@@ -69,7 +72,11 @@ void DeviceCollection::findControllers()
         const char* serial = udev_device_get_property_value(usbhid_dev, "KERNELS");
         qDebug() << serial;
         qDebug() << "HIGH CUCKERY";
+        qDebug() << syspath;
+        qDebug() << path2;
         qDebug() << path3;
+        qDebug() << path4;
+        qDebug() << udev_device_get_sysattr_value(usbhid_dev2, "uevent");
 
         printf("block = %s, %s, usb = %s:%s, scsi = %s, shit = %s, ggg = %s\n",
                            syspath,

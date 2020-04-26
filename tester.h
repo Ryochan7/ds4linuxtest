@@ -34,10 +34,13 @@ protected:
     void initDev();
     void initUSB();
     void initBT();
+    void setOperational();
 
     const int MAX_READ_EVENTS = 2;
     static const int DS4_REPORT_0x05_LEN = 32;
+    static const int DS4_REPORT_0x11_LEN = 78;
     static const int DS4_REPORT_0x15_LEN = 334;
+    static const int DS4_FEATURE_REPORT_0x05_SIZE = 41;
 
     QFile *testDev;
     int hidHandle;
@@ -48,8 +51,8 @@ protected:
     //struct epoll_event ev1;
     struct epoll_event events[2];
     uchar bufshit[64];
-    uchar bufout[32];
-    //uchar bufout[334]; // BT
+    //uchar bufout[DS4_REPORT_0x05_LEN];
+    uchar bufout[DS4_REPORT_0x11_LEN]; // BT
     bool stillread;
     DS4State currentState;
     DS4State previousState;

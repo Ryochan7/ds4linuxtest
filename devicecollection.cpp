@@ -44,12 +44,12 @@ void DeviceCollection::findControllers()
                     = udev_device_get_parent_with_subsystem_devtype(hidraw_dev, "hid", NULL);
         struct udev_device* usbhid_dev2
                     = udev_device_get_parent_with_subsystem_devtype(hidraw_dev, "usb", "usb_device");
-        const char* path2 = udev_device_get_devpath(usbhid_dev);
-        Q_UNUSED(path2);
-        const char* path3 = udev_device_get_devnode(hidraw_dev);
-        const char* path4 = udev_device_get_devnode(usbhid_dev2);
+        const char* hiddev_path = udev_device_get_devpath(usbhid_dev);
+        Q_UNUSED(hiddev_path);
+        const char* hidrawdev_path = udev_device_get_devnode(hidraw_dev);
+        const char* usbdev_path = udev_device_get_devnode(usbhid_dev2);
 
-        QString tempPath =  QString::fromLocal8Bit(path3);
+        QString tempPath =  QString::fromLocal8Bit(hidrawdev_path);
         if (existingDevPaths.contains(tempPath))
         {
             continue;
@@ -73,9 +73,9 @@ void DeviceCollection::findControllers()
         qDebug() << serial;
         qDebug() << "HIGH CUCKERY";
         qDebug() << syspath;
-        qDebug() << path2;
-        qDebug() << path3;
-        qDebug() << path4;
+        qDebug() << hiddev_path;
+        qDebug() << hidrawdev_path;
+        qDebug() << usbdev_path;
         qDebug() << udev_device_get_sysattr_value(usbhid_dev2, "uevent");
 
         printf("block = %s, %s, usb = %s:%s, scsi = %s, shit = %s, ggg = %s\n",
@@ -85,7 +85,7 @@ void DeviceCollection::findControllers()
                            udev_device_get_sysattr_value(usbhid_dev, "idProduct"),
                            udev_device_get_sysattr_value(usbhid_dev, "uevent"),
                 udev_device_get_property_value(usbhid_dev, "HID_UNIQ"),
-               path2)
+               hiddev_path)
                 ;
 
         //int vendor_id = QString(vendor_id_str).toInt(&ok, 16);
@@ -101,9 +101,9 @@ void DeviceCollection::findControllers()
                 {
                     //struct udev_device *usbtemp = udev_device_get_parent(usbhid);
                     struct udev_device *chid = getDevChild(usbhid_dev, "input");
-                    qDebug() << "DDD " << udev_device_get_property_value(chid, "idVendor");
+                    qDebug() << "DDD " << udev_device_get_sysattr_value(chid, "uevent");
 
-                    Tester *tempDev = new Tester(path3);
+                    Tester *tempDev = new Tester(hidrawdev_path);
                     if (bus_id == 5)
                     {
                         tempDev->conType = Tester::ConnectionType::BT;

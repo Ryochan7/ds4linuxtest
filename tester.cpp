@@ -2,6 +2,9 @@
 #include <unistd.h>
 #include <sys/eventfd.h>
 #include <linux/hidraw.h>
+//#include <linux/byteorder/little_endian.h>
+#include "crc32.h"
+//#include <zlib.h>
 
 #include <QDebug>
 #include <QTime>
@@ -69,7 +72,7 @@ void Tester::initDev()
     {
         //bufout = new uchar[DS4_OUTPUT_REPORT_0x15_LEN];
         //for (int i = 0; i < DS4_OUTPUT_REPORT_0x15_LEN; i++) bufout[i] = 0;
-        memset(&bufout, 0, DS4_OUTPUT_REPORT_0x15_LEN);
+        memset(bufout, 0, DS4_OUTPUT_REPORT_0x15_LEN);
         setOperational();
         initBT();
     }
@@ -77,7 +80,7 @@ void Tester::initDev()
     {
         //bufout = new uchar[DS4_OUTPUT_REPORT_0x05_LEN];
         //for (int i = 0; i < DS4_OUTPUT_REPORT_0x05_LEN; i++) bufout[i] = 0;
-        memset(&bufout, 0, DS4_OUTPUT_REPORT_0x05_LEN);
+        memset(bufout, 0, DS4_OUTPUT_REPORT_0x05_LEN);
         setOperational();
         initUSB();
     }
@@ -108,7 +111,7 @@ void Tester::setOperational()
 {
     int report_len = conType == BT ? DS4_FEATURE_REPORT_0x05_SIZE : DS4_FEATURE_REPORT_0x02_SIZE;
     uchar report[report_len];
-    memset(&report, 0, report_len);
+    memset(report, 0, report_len);
     report[0] = conType == BT ? 0x05 : 0x02;
 
     int res = ioctl(hidWriteHandle, HIDIOCGFEATURE(report_len), &report);
@@ -121,21 +124,72 @@ void Tester::setOperational()
 void Tester::initBT()
 {
     bufout[0] = 0x15;
-    bufout[1] = 0xC4;
-    //bufout[2] = 0xa0;
+    bufout[1] = 0xC0;
+    //bufout[2] = 0xA2;
     // enable rumble (0x01), lightbar (0x02), flash (0x04)
     bufout[3] = 0xF7;
     bufout[6] = 0xFF; // fast motor
     bufout[7] = 0xFF; // slow motor
-    bufout[8] = 0xFF; // red
+    bufout[8] = 0x00; // red
     bufout[9] = 0xFF; // green
     bufout[10] = 0xFF; // blue
     bufout[11] = 0x00; // flash on duration
     bufout[12] = 0x00; // flash off duration
 
     //write(hidHandle, bufout, 32);
+
+    /* CRC generation */
+    uint8_t bthdr = 0xA2;
+    uint32_t crc;
+
+    crc = crc32_le(0xFFFFFFFF, &bthdr, 1);
+    crc = ~crc32_le(crc, bufout, DS4_OUTPUT_REPORT_0x15_LEN-4);
+    bufout[330] = crc;
+    bufout[331] = crc >> 8;
+    bufout[332] = crc >> 16;
+    bufout[333] = crc >> 24;
+    //__put_unaligned_le32(crc, &bufout[74]);
+
     int res = write(hidWriteHandle, bufout, DS4_OUTPUT_REPORT_0x15_LEN);
-    //qDebug() << res;
+    qDebug() << res;
+    Q_UNUSED(res);
+    //QTime start;
+    //start.start();
+    //testDev->write((char*)bufout, 32);
+    //qDebug() << "gdgdfdf " << start.elapsed();
+}
+
+void Tester::initBT11()
+{
+    bufout[0] = 0x11;
+    bufout[1] = 0xC0;
+    //bufout[2] = 0xA2;
+    // enable rumble (0x01), lightbar (0x02), flash (0x04)
+    bufout[3] = 0xF7;
+    bufout[6] = 0x00; // fast motor
+    bufout[7] = 0xFF; // slow motor
+    bufout[8] = 0xFF; // red
+    bufout[9] = 0x00; // green
+    bufout[10] = 0xFF; // blue
+    bufout[11] = 0x00; // flash on duration
+    bufout[12] = 0x00; // flash off duration
+
+    //write(hidHandle, bufout, 32);
+
+    /* CRC generation */
+    uint8_t bthdr = 0xA2;
+    uint32_t crc;
+
+    crc = crc32_le(0xFFFFFFFF, &bthdr, 1);
+    crc = ~crc32_le(crc, bufout, DS4_OUTPUT_REPORT_0x11_LEN-4);
+    bufout[74] = crc;
+    bufout[75] = crc >> 8;
+    bufout[76] = crc >> 16;
+    bufout[77] = crc >> 24;
+    //__put_unaligned_le32(crc, &bufout[74]);
+
+    int res = write(hidWriteHandle, bufout, DS4_OUTPUT_REPORT_0x11_LEN);
+    qDebug() << res;
     Q_UNUSED(res);
     //QTime start;
     //start.start();

@@ -34,6 +34,7 @@ protected:
     void initDev();
     void initUSB();
     void initBT();
+    void initBT11();
     void setOperational();
 
     const int MAX_READ_EVENTS = 2;

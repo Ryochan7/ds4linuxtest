@@ -34,6 +34,9 @@ void DeviceCollection::findControllers()
     udev_enumerate_scan_devices(enumerate);
     struct udev_list_entry *devices = udev_enumerate_get_list_entry(enumerate);
     struct udev_list_entry *entry;
+
+    QRegExp jizzle_physics(HID_ID_PATTERN);
+
     udev_list_entry_foreach(entry, devices)
     {
         const char* syspath = udev_list_entry_get_name(entry);
@@ -55,7 +58,7 @@ void DeviceCollection::findControllers()
             continue;
         }
 
-        QRegExp jizzle_physics(HID_ID_PATTERN);
+
         const char* hid_id = udev_device_get_property_value(usbhid_dev, "HID_ID");
         int vendor_id = 0; int product_id = 0;
         int bus_id = 0;

@@ -34,13 +34,20 @@ void Tester::openDevice()
 {
 
     qDebug() << "Halls of justice painted green";
+
     //hidHandle = open("/dev/hidraw4", O_RDWR);
 
-    QByteArray ba = devPath.toLatin1();
-    const char* temppath = ba.data();
-    qDebug() << "OPATHIT " << temppath;
-    hidHandle = open(temppath, O_RDONLY);
-    hidWriteHandle = open(temppath, O_RDWR | O_NONBLOCK);
+    tempThread = new QThread();
+    // Run slot on new thread
+    connect(tempThread, &QThread::started, this, &Tester::openHelper, Qt::DirectConnection);
+    tempThread->start(QThread::HighPriority);
+    tempThread->wait();
+
+//    QByteArray ba = devPath.toLatin1();
+//    const char* temppath = ba.data();
+//    qDebug() << "OPATHIT " << temppath;
+//    hidHandle = open(temppath, O_RDONLY);
+//    hidWriteHandle = open(temppath, O_RDWR | O_NONBLOCK);
     //hidWriteHandle = open(temppath, O_WRONLY | O_NONBLOCK);
 
     //hidHandle = open("/dev/hidraw4", O_RDONLY);
@@ -58,12 +65,29 @@ void Tester::openDevice()
     epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
     */
     //testDev->open(QIODevice::ReadWrite | QIODevice::Unbuffered);
-    initDev();
+    //initDev();
 
     outdev = new XboxOutDevice(this);
     outdev->createDevice();
     started = true;
     //sleep(2);
+}
+
+void Tester::openHelper()
+{
+    qDebug() << "HALKJDLKJFLKJDLK";
+    QByteArray ba = devPath.toLatin1();
+    const char* temppath = ba.data();
+    qDebug() << "OPATHIT " << temppath;
+    hidHandle = open(temppath, O_RDONLY);
+    hidWriteHandle = open(temppath, O_WRONLY | O_NONBLOCK);
+
+    initDev();
+
+//    outdev = new XboxOutDevice(this);
+//    outdev->createDevice();
+
+    tempThread->quit();
 }
 
 void Tester::initDev()
@@ -91,6 +115,7 @@ void Tester::initUSB()
     bufout[0] = 0x05;
     // enable rumble (0x01), lightbar (0x02), flash (0x04)
     bufout[1] = 0xf7;
+    bufout[2] = 0x04;
     bufout[4] = 0x00; // fast motor
     bufout[5] = 0x00; // slow motor
     bufout[6] = 0x00; // red
@@ -100,15 +125,17 @@ void Tester::initUSB()
     bufout[10] = 0x00; // flash off duration
 
     //write(hidHandle, bufout, 32);
-    write(hidWriteHandle, bufout, DS4_OUTPUT_REPORT_0x05_LEN);
     //QTime start;
     //start.start();
+    write(hidWriteHandle, bufout, DS4_OUTPUT_REPORT_0x05_LEN);
+
     //testDev->write((char*)bufout, 32);
     //qDebug() << "gdgdfdf " << start.elapsed();
 }
 
 void Tester::setOperational()
 {
+    // Getting calibration report puts the DS4 into PS4 mode
     int report_len = conType == BT ? DS4_FEATURE_REPORT_0x05_SIZE : DS4_FEATURE_REPORT_0x02_SIZE;
     uchar report[report_len];
     memset(report, 0, report_len);
@@ -125,11 +152,12 @@ void Tester::initBT()
 {
     bufout[0] = 0x15;
     bufout[1] = 0xC0;
-    //bufout[2] = 0xA2;
+    bufout[2] = 0xA0;
     // enable rumble (0x01), lightbar (0x02), flash (0x04)
     bufout[3] = 0xF7;
-    bufout[6] = 0xFF; // fast motor
-    bufout[7] = 0xFF; // slow motor
+    bufout[4] = 0x04;
+    bufout[6] = 0x00; // fast motor
+    bufout[7] = 0x00; // slow motor
     bufout[8] = 0x00; // red
     bufout[9] = 0xFF; // green
     bufout[10] = 0xFF; // blue
@@ -142,6 +170,7 @@ void Tester::initBT()
     uint8_t bthdr = 0xA2;
     uint32_t crc;
 
+    // Place CRC32 data in report so interrupt endpoint can be used
     crc = crc32_le(0xFFFFFFFF, &bthdr, 1);
     crc = ~crc32_le(crc, bufout, DS4_OUTPUT_REPORT_0x15_LEN-4);
     bufout[330] = crc;
@@ -153,10 +182,8 @@ void Tester::initBT()
     int res = write(hidWriteHandle, bufout, DS4_OUTPUT_REPORT_0x15_LEN);
     qDebug() << res;
     Q_UNUSED(res);
-    //QTime start;
-    //start.start();
-    //testDev->write((char*)bufout, 32);
-    //qDebug() << "gdgdfdf " << start.elapsed();
+
+    qDebug() << "gdgdfdf ";
 }
 
 void Tester::initBT11()
@@ -167,9 +194,9 @@ void Tester::initBT11()
     // enable rumble (0x01), lightbar (0x02), flash (0x04)
     bufout[3] = 0xF7;
     bufout[6] = 0x00; // fast motor
-    bufout[7] = 0xFF; // slow motor
-    bufout[8] = 0xFF; // red
-    bufout[9] = 0x00; // green
+    bufout[7] = 0x00; // slow motor
+    bufout[8] = 0x00; // red
+    bufout[9] = 0xFF; // green
     bufout[10] = 0xFF; // blue
     bufout[11] = 0x00; // flash on duration
     bufout[12] = 0x00; // flash off duration

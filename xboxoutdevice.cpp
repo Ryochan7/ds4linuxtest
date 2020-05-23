@@ -10,7 +10,7 @@ XboxOutDevice::XboxOutDevice(QObject *parent) : QObject(parent)
 
 void XboxOutDevice::createDevice()
 {
-    uinputHandler = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    uinputHandler = open("/dev/uinput", O_RDWR | O_NONBLOCK);
     struct uinput_user_dev uidev;
     strncpy(uidev.name, "Microsoft X-Box 360 pad", UINPUT_MAX_NAME_SIZE);
     uidev.id.bustype = BUS_USB;

@@ -68,9 +68,10 @@ protected:
 
     QWaitCondition inputEnded;
     QMutex waitInputEnd;
-    QThread testInputThread;
+    //QThread testInputThread;
     QThread *btOutputThread = nullptr;
     QThread otherInputThread;
+    QThread *tempThread;
     //std::thread *dudebro;
 
 signals:
@@ -78,6 +79,7 @@ signals:
 public slots:
     void openDevice();
     void startShit();
+    void openHelper();
     void stopDevice();
 };
 
